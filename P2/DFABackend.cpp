@@ -1,20 +1,21 @@
 #include "DFABackend.h"
+using namespace std;
 
-std::string getStateName(int state) {
+string getStateName(int state) {
     switch(state) {
         case 0: return "Start\n0 Ones";
-        case 1: return "q1\n0 Ones\nEnds in 0\n(Reject)";
-        case 2: return "q2\n1 Ones (mod 3)\nEnds in 1\n(Reject)";
-        case 3: return "q3\n1 Ones (mod 3)\nEnds in 0\n(Reject)";
-        case 4: return "q4\n2 Ones (mod 3)\nEnds in 1\n(Reject)";
-        case 5: return "q5\n2 Ones (mod 3)\nEnds in 0\n(Reject)";
-        case 6: return "q6\n0 Ones (mod 3)\nEnds in 1\n(Reject)";
-        case 7: return "q7\n0 Ones (mod 3)\nEnds in 0\n(ACCEPT)";
+        case 1: return "\n0 Ones\nEnds in 0\n(Reject)";
+        case 2: return "\n1 Ones \nEnds in 1\n(Reject)";
+        case 3: return "\n1 Ones \nEnds in 0\n(Reject)";
+        case 4: return "\n2 Ones \nEnds in 1\n(Reject)";
+        case 5: return "\n2 Ones \nEnds in 0\n(Reject)";
+        case 6: return "\n0 Ones \nEnds in 1\n(Reject)";
+        case 7: return "\n0 Ones \nEnds in 0\n(ACCEPT)";
     }
     return "Unknown";
 }
 
-DFAResult checkDFA(const std::string& input) {
+DFAResult checkDFA(const string& input) {
     DFAResult result;
     result.accepted = false;
     result.finalState = 0;
