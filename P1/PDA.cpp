@@ -20,30 +20,11 @@ struct Transition {
         string readStr = readInput.empty() ? "e" : readInput;
         string popStr = popStack.empty() ? "e" : popStack;
         string pushStr = pushStack.empty() ? "e" : pushStack;
-        
-        cout << "Transition: (" << fromState << ", " << readStr << ", " 
-             << popStr << ") -> (" << toState << ", " << pushStr << ")\n";
+
+        cout << "Transition: (" << fromState << ", " << readStr << ", "
+            << popStr << ") -> (" << toState << ", " << pushStr << ")\n";
     }
 };
-
-void push_in_reverse(vector<string> productions, int& stateCounter, vector<Transition>& transitions) {
-    for (const auto& production : productions) {
-        string currentState = "q" + to_string(stateCounter);
-        string endState;
-        for (int i = production.length() - 1; i >= 0; i--) {
-            if (i == 0)
-                endState = "q_loop";
-            else
-                endState = "q" + to_string(stateCounter);
-
-            transitions.push_back({currentState, "", "", string(1, production[i]), endState});
-            currentState = "q" + to_string(stateCounter);
-            stateCounter++;
-        }
-    }
-    return;
-}
-
 
 vector<string> take_input()
 {
@@ -102,7 +83,7 @@ public:
             if (nonTerm.empty()) {
                 return "Error: Empty non-terminal in rule: " + rule;
             }
-            
+
             // Add to non-terminals array if not already present
             if (find(nonTerminals.begin(), nonTerminals.end(), nonTerm) == nonTerminals.end()) {
                 nonTerminals.push_back(nonTerm);
@@ -165,7 +146,32 @@ public:
     }
 };
 
-int main ()
+void push_in_reverse(vector<string> productions, int& stateCounter, vector<Transition>& transitions) {
+    string RuleCurrentState = "q" + to_string(stateCounter);
+    for (const auto& production : productions) {
+        string ProdCurrentState = RuleCurrentState;
+        string endState;
+        stateCounter++;
+        for (int i = production.length() - 1; i >= 0; i--) {
+            if (i == 0)
+                endState = "q_loop";
+            //else if (i == production.length() - 1)
+                //currentState = "q_loop";
+            else
+                endState = "q" + to_string(stateCounter);
+            if (production[i] == ' ') {
+                continue; // Skip spaces in the production
+            }
+            transitions.push_back({ ProdCurrentState, "", "", string(1, production[i]), endState });
+            ProdCurrentState = "q" + to_string(stateCounter);
+            if (i > 2)
+                stateCounter++;
+        }
+    }
+    return;
+}
+
+int main()
 {
     vector<string> input = take_input();
     CFGParser parser;
@@ -180,28 +186,28 @@ int main ()
     terminals = parser.getTerminals();
     string startSymbol = parser.getStartSymbol();
     rules = parser.getRules();
-    
-    transitions.push_back({"q0", "", "", "$", "q1"});
-    transitions.push_back({"q1", "", "", startSymbol, "q_loop"});
+
+    transitions.push_back({ "q0", "", "", "$", "q1" });
+    transitions.push_back({ "q1", "", "", startSymbol, "q_loop" });
     int stateCounter = 2;
 
     for (auto rule : rules)
     {
         string endState = "q" + to_string(stateCounter);
-        transitions.push_back({"q_loop", "", rule.first, "", endState });
-        stateCounter++;
+        transitions.push_back({ "q_loop", "", rule.first, "", endState });
+        //stateCounter++;
         push_in_reverse(rule.second, stateCounter, transitions);
     }
 
     for (auto terminal : terminals) {
-        transitions.push_back({"q_loop", terminal, terminal, "", "q_loop" });
+        transitions.push_back({ "q_loop", terminal, terminal, "", "q_loop" });
     }
 
-    transitions.push_back({"q_loop", "", "$", "", "q_final" });
+    transitions.push_back({ "q_loop", "", "$", "", "q_final" });
 
     for (const auto& transition : transitions) {
         transition.print();
     }
-    
+
     return 0;
 }
