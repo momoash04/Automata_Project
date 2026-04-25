@@ -148,24 +148,25 @@ public:
 
 void push_in_reverse(vector<string> productions, int& stateCounter, vector<Transition>& transitions) {
     string RuleCurrentState = "q" + to_string(stateCounter);
+    stateCounter++;
     for (const auto& production : productions) {
-        string ProdCurrentState = RuleCurrentState;
+        string ProdCurrentState;
         string endState;
-        stateCounter++;
         for (int i = production.length() - 1; i >= 0; i--) {
-            if (i == 0)
+            ProdCurrentState = "q" + to_string(stateCounter-1);
+            endState = "q" + to_string(stateCounter);
+            if (i == 0) {
                 endState = "q_loop";
-            //else if (i == production.length() - 1)
-                //currentState = "q_loop";
-            else
-                endState = "q" + to_string(stateCounter);
+                stateCounter--;
+            }
+            if (i == production.length() - 1) {
+                ProdCurrentState = RuleCurrentState;
+            }
             if (production[i] == ' ') {
                 continue; // Skip spaces in the production
             }
+            stateCounter++;
             transitions.push_back({ ProdCurrentState, "", "", string(1, production[i]), endState });
-            ProdCurrentState = "q" + to_string(stateCounter);
-            if (i > 2)
-                stateCounter++;
         }
     }
     return;
@@ -195,7 +196,6 @@ int main()
     {
         string endState = "q" + to_string(stateCounter);
         transitions.push_back({ "q_loop", "", rule.first, "", endState });
-        //stateCounter++;
         push_in_reverse(rule.second, stateCounter, transitions);
     }
 
