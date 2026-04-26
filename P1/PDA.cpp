@@ -39,6 +39,16 @@ vector<string> take_input()
     return input;
 }
 
+    static vector<string> splitSymbolsBySpace(const string& production) {
+        vector<string> tokens;
+        string token;
+        stringstream ss(production);
+        while (ss >> token) {
+            tokens.push_back(token);
+        }
+        return tokens;
+    }
+
 class CFGParser {
 private:
     vector<string> grammar;           // Raw grammar rules (user input)
@@ -53,15 +63,7 @@ private:
         return s.substr(start, end - start + 1);
     }
 
-    static vector<string> splitSymbolsBySpace(const string& production) {
-        vector<string> tokens;
-        string token;
-        stringstream ss(production);
-        while (ss >> token) {
-            tokens.push_back(token);
-        }
-        return tokens;
-    }
+
 
 
 public:
@@ -150,23 +152,22 @@ void push_in_reverse(vector<string> productions, int& stateCounter, vector<Trans
     string RuleCurrentState = "q" + to_string(stateCounter);
     stateCounter++;
     for (const auto& production : productions) {
+        vector<string> symbols = splitSymbolsBySpace(production);
         string ProdCurrentState;
         string endState;
-        for (int i = production.length() - 1; i >= 0; i--) {
+        for (int i = symbols.size() - 1; i >= 0; i--) {
             ProdCurrentState = "q" + to_string(stateCounter-1);
             endState = "q" + to_string(stateCounter);
             if (i == 0) {
                 endState = "q_loop";
                 stateCounter--;
             }
-            if (i == production.length() - 1) {
+            if (i == symbols.size() - 1) {
                 ProdCurrentState = RuleCurrentState;
             }
-            if (production[i] == ' ') {
-                continue; // Skip spaces in the production
-            }
+
             stateCounter++;
-            transitions.push_back({ ProdCurrentState, "", "", string(1, production[i]), endState });
+            transitions.push_back({ ProdCurrentState, "", "", symbols[i], endState });
         }
     }
     return;
