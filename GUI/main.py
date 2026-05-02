@@ -36,26 +36,39 @@ class OneRowScrollFilter(QObject):
 #  WORKER
 # ─────────────────────────────────────────────────────────
 class PDAWorker(QThread):
-    finished = Signal(str, list)
+    # Update signal to include a 3rd parameter for the test result
+    finished = Signal(str, list, str) 
     error    = Signal(str)
 
-    def __init__(self, cfg_text):
+    def __init__(self, cfg_text, test_string=""): # Added test_string[cite: 5]
         super().__init__()
         self.cfg_text = cfg_text
+        self.test_string = test_string
 
     def run(self):
         try:
-            user_input = self.cfg_text.replace("\r", "").strip() + "\n\n"
-            exe_path   = os.path.abspath("../P1/pda.exe")
+            # Combine Grammar + Blank Line + Test String for C++[cite: 5]
+            user_input = self.cfg_text.replace("\r", "").strip() + "\n\n" + self.test_string + "\n"
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            exe_path = os.path.join(script_dir, "..", "P1", "pda.exe")
 
             process = subprocess.run(
                 [exe_path], input=user_input, text=True,
-                capture_output=True, timeout=3
+                capture_output=True, timeout=5 # Increased timeout slightly[cite: 5]
             )
 
             transitions = []
+            test_result = "PENDING"
+            
             for line in process.stdout.splitlines():
                 line = line.strip()
+                
+                # Capture the simulation result[cite: 5]
+                if "Result: ACCEPTED" in line:
+                    test_result = "ACCEPTED"
+                elif "Result: REJECTED" in line:
+                    test_result = "REJECTED"
+
                 if not line.startswith("Transition:"):
                     continue
                 try:
@@ -121,7 +134,7 @@ class PDAWorker(QThread):
             img_path = f"pda_graph_{int(time.time() * 1000)}"
             dot.render(img_path, cleanup=True)
 
-            self.finished.emit(f"{img_path}.png", transitions)
+            self.finished.emit(f"{img_path}.png", transitions, test_result)
 
         except Exception as e:
             self.error.emit(str(e))
@@ -514,6 +527,56 @@ class TranslatioApp(QMainWindow):
         """)
         ov_layout.addWidget(ov_sub, alignment=Qt.AlignCenter)
 
+    # ── STRING TESTING CARD (NEW) ─────────────────────
+        self.test_card = QFrame()
+        self.test_card.setFixedWidth(640)
+        self.test_card.setStyleSheet("""
+            QFrame {
+                background-color: rgba(24, 255, 255, 0.04);
+                border: 1px solid rgba(24, 255, 255, 0.22);
+                border-radius: 16px;
+            }
+        """)
+        tc_inner = QVBoxLayout(self.test_card)
+        tc_inner.setContentsMargins(20, 14, 20, 14)
+        tc_inner.addWidget(section_label("PDA STRING SIMULATION"))
+
+        test_row = QHBoxLayout()
+        self.test_input = QTextEdit()
+        self.test_input.setPlaceholderText("Enter string to test (e.g., a b f b a)")
+        self.test_input.setFixedHeight(45)
+        self.test_input.setStyleSheet("""
+            QTextEdit {
+                background: rgba(11, 12, 16, 0.4);
+                border: 1px solid rgba(24, 255, 255, 0.1);
+                color: white;
+                font-size: 16px;
+                padding: 8px;
+            }
+        """)
+        test_row.addWidget(self.test_input)
+
+        self.run_test_btn = QPushButton("TEST")
+        self.run_test_btn.setFixedSize(100, 45)
+        self.run_test_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #18FFFF;
+                color: #0B0C10;
+                font-weight: 900;
+                border-radius: 4px;
+            }
+        """)
+        test_row.addWidget(self.run_test_btn)
+        tc_inner.addLayout(test_row)
+
+        self.result_lbl = QLabel("Result: PENDING")
+        self.result_lbl.setStyleSheet("color: rgba(255,255,255,0.4); font-weight: 800; font-size: 14px; padding-top: 5px;")
+        tc_inner.addWidget(self.result_lbl)
+
+        self.root_layout.addWidget(self.test_card, alignment=Qt.AlignCenter)
+        self.test_card.hide() # Hide until compilation is successful
+        self.run_test_btn.clicked.connect(self.start_test)
+
     # ── Events ────────────────────────────────────────────
     def resizeEvent(self, event):
         self.overlay.resize(event.size())
@@ -563,6 +626,55 @@ class TranslatioApp(QMainWindow):
         self.btn.setEnabled(True)
         print(f"Engine Error: {err}")
 
+    def start_test(self):
+        self.result_lbl.setText("Result: SIMULATING...")
+        self.result_lbl.setStyleSheet("color: #18FFFF;")
+        
+        # Pass both input box and test input box to worker[cite: 5]
+        self.worker = PDAWorker(self.input_box.toPlainText(), self.test_input.toPlainText())
+        self.worker.finished.connect(self.on_success)
+        self.worker.error.connect(self.on_fail)
+        self.worker.start()
+
+    # Ensure this handles 3 arguments (img_path, transitions, test_result)[cite: 5]
+    def on_success(self, img_path, transitions, test_result="PENDING"):
+        # 1. Clean up UI state
+        self.container.setGraphicsEffect(None)
+        self.overlay.hide()
+        self.btn.setEnabled(True)
+
+        # 2. Update the Diagram
+        pixmap = QPixmap(img_path)
+        self.graph_img.setSourcePixmap(pixmap)
+
+        # 3. FILL THE TABLE (The missing logic)
+        bold = QFont("Helvetica", 12, QFont.Bold)
+        self.table.setRowCount(len(transitions))
+        for row, data in enumerate(transitions):
+            for col, value in enumerate(data):
+                item = QTableWidgetItem(value)
+                item.setTextAlignment(Qt.AlignCenter)
+                item.setFont(bold)
+                # Alternate row tinting for readability
+                if row % 2 == 0:
+                    item.setBackground(QColor(24, 255, 255, 10))
+                self.table.setItem(row, col, item)
+        
+        # Adjust table height dynamically based on content
+        self.table.setFixedHeight(min(520, len(transitions) * 40 + 56))
+
+        # 4. Update Simulation Results
+        self.test_card.show()
+        self.bottom_row.show()
+        self.result_lbl.setText(f"Result: {test_result}")
+        
+        # Dynamic coloring for Accept/Reject[cite: 5]
+        if test_result == "ACCEPTED":
+            self.result_lbl.setStyleSheet("color: #00E676; font-weight: 900; font-size: 16px;")
+        elif test_result == "REJECTED":
+            self.result_lbl.setStyleSheet("color: #FF5252; font-weight: 900; font-size: 16px;")
+        else:
+            self.result_lbl.setStyleSheet("color: rgba(255,255,255,0.4); font-weight: 800; font-size: 14px;")
 
 # ─────────────────────────────────────────────────────────
 if __name__ == "__main__":
