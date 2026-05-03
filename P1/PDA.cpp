@@ -152,7 +152,10 @@ void push_in_reverse(vector<string> productions, int& stateCounter, vector<Trans
         vector<string> symbols = splitSymbolsBySpace(production);
         string symbol = "";
         for (int i = symbols.size() - 1; i >= 0; i--) {
-            symbol = symbol + symbols[i] + " " ;
+            // Check added here: Only add to push string if it's NOT epsilon
+            if (symbols[i] != "e") { 
+                symbol = symbol + symbols[i] + " ";
+            }
         }
         transitions.push_back({ RuleCurrentState, "", "", symbol, "q_loop" });
     }
