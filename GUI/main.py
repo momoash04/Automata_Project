@@ -76,8 +76,20 @@ class PDAWorker(QThread):
                     left, right = core.split("->")
                     l_toks = [t.strip() for t in left.strip()[1:-1].split(",", 2)]
                     r_toks = [t.strip() for t in right.strip()[1:-1].split(",", 1)]
-                    transitions.append([l_toks[0], l_toks[1], l_toks[2], r_toks[1], r_toks[0]])
-                except:
+                    
+                    from_st  = l_toks[0]
+                    read_in  = l_toks[1]
+                    pop_stk  = l_toks[2]
+                    to_st    = r_toks[0]
+                    
+                    # Keep the push string exactly as C++ outputs it (e.g., "B A a b")
+                    # but strip any extra trailing spaces for a cleaner look
+                    push_str = r_toks[1].strip()
+                    
+                    # Append exactly one transition line. No extra states.
+                    transitions.append([from_st, read_in, pop_stk, push_str, to_st])
+                        
+                except Exception as e:
                     continue
 
             if not transitions:
