@@ -145,20 +145,6 @@ public:
     }
 };
 
-void push_in_reverse(vector<string> productions, int& stateCounter, vector<Transition>& transitions) {
-    string RuleCurrentState = "q" + to_string(stateCounter);
-    stateCounter++;
-    for (const auto& production : productions) {
-        vector<string> symbols = splitSymbolsBySpace(production);
-        string symbol = "";
-        for (int i = symbols.size() - 1; i >= 0; i--) {
-            symbol = symbol + symbols[i] + " " ;
-        }
-        transitions.push_back({ RuleCurrentState, "", "", symbol, "q_loop" });
-    }
-    return;
-}
-
 
 // Recursive function to simulate the Non-Deterministic PDA
 bool simulatePDA(const vector<Transition>& transitions, string currentState, 
@@ -240,9 +226,19 @@ int main()
 
     for (auto rule : rules)
     {
-        string endState = "q" + to_string(stateCounter);
-        transitions.push_back({ "q_loop", "", rule.first, "", endState });
-        push_in_reverse(rule.second, stateCounter, transitions);
+        for (const auto& production : rule.second)
+        {
+            vector<string> symbols = splitSymbolsBySpace(production);
+            string pushStr = "";
+            for (int i = symbols.size() - 1; i >= 0; i--)
+            {
+                if (symbols[i] != "e"){
+                    pushStr += symbols[i] + " ";
+                }
+                
+            }
+            transitions.push_back({ "q_loop", "", rule.first, pushStr, "q_loop" });
+        }
     }
 
     for (auto terminal : terminals) {
