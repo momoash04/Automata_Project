@@ -60,3 +60,32 @@ DFAResult checkDFA(const string& input) {
     result.currentStateName = getStateName(state);
     return result;
 }
+
+extern "C" {
+#ifdef _WIN32
+    __declspec(dllexport)
+#endif
+    void c_checkDFA(const char* input, bool* out_accepted, int* out_finalState, bool* out_error) {
+        if (input == nullptr) {
+            *out_accepted = false;
+            *out_finalState = 0;
+            *out_error = false;
+            return;
+        }
+        
+        std::string str(input);
+        for (char c : str) {
+            if (c != '0' && c != '1') {
+                *out_error = true;
+                *out_finalState = -1;
+                *out_accepted = false;
+                return;
+            }
+        }
+        
+        DFAResult res = checkDFA(str);
+        *out_accepted = res.accepted;
+        *out_finalState = res.finalState;
+        *out_error = false;
+    }
+}
